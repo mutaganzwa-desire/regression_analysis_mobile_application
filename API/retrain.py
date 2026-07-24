@@ -13,7 +13,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
-from summative.API.prediction import ARTIFACT_PATH, invalidate_artifact_cache
+from prediction import ARTIFACT_PATH, invalidate_artifact_cache
 
 logger = logging.getLogger(__name__)
 

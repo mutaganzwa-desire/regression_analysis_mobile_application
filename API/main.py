@@ -8,9 +8,9 @@ import logging
 from datetime import datetime, timezone
 from fastapi import FastAPI, UploadFile, File, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from summative.API.schemas import CarPredictionInput, PredictionResponse, RetrainResponse
-from summative.API.prediction import run_inference
-from summative.API.retrain import execute_pipeline_retraining
+from schemas import CarPredictionInput, PredictionResponse, RetrainResponse
+from prediction import run_inference
+from retrain import execute_pipeline_retraining
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("API_GATEWAY")
