@@ -5,7 +5,7 @@ Allows quick testing of the ML model independently of network layers.
 
 import sys
 from typing import Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Direct module routing adjustment
 try:
@@ -16,18 +16,16 @@ except ImportError:
     from summative.API.prediction import run_inference
 
 def main() -> None:
-    # Diagnostic test mock tracking real feature dimensions
+    # Payload matching real dataset feature specifications
     mock_payload: Dict[str, Any] = {
-        "year": 2021,
-        "mileage": 24500.0,
-        "engine_size": 2.0,
-        "hp": 252.0,
-        "brand": "BMW",
-        "transmission": "Automatic",
-        "fuel_type": "Petrol"
+        "brand": "Ford",
+        "model_year": 2018,
+        "milage": 45000.0,
+        "fuel_type": "Gasoline",
+        "accident": "None reported"
     }
     
-    print(f"[{datetime.now().isoformat()}] Simulating local prediction routine...")
+    print(f"[{datetime.now(timezone.utc).isoformat()}] Simulating local prediction routine...")
     print(f"Feature vector inputs:\n {mock_payload}")
     
     try:

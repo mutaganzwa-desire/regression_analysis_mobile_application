@@ -5,7 +5,7 @@ orchestrates middleware, and implements access policies.
 
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import FastAPI, UploadFile, File, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from summative.API.schemas import CarPredictionInput, PredictionResponse, RetrainResponse
@@ -23,8 +23,11 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Rationale: Specific origins prevent unauthorized cross-origin requests, blocking arbitrary web scraping scripts.
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+# Expanded origin fallbacks for seamless local mobile/web testing
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS", 
+    "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000"
+).split(",")
 
 app.add_middleware(
     CORSMiddleware,
@@ -51,7 +54,7 @@ async def health_check():
         artifacts = load_prediction_artifacts()
         return {
             "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "artifacts_loaded": list(artifacts.keys())
         }
     except Exception as e:
@@ -70,7 +73,7 @@ async def predict_price(payload: CarPredictionInput):
         return PredictionResponse(
             predicted_price=round(predicted_value, 2),
             status="SUCCESS",
-            timestamp=datetime.utcnow().isoformat()
+            timestamp=datetime.now(timezone.utc).isoformat()
         )
     except FileNotFoundError as fnf:
         logger.error(f"Inference called without model initialization: {str(fnf)}")

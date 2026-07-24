@@ -1,56 +1,34 @@
-"""
-API Data Contract Schema Layer.
-Defines Pydantic models with strict range guardrails for input payload validation.
-"""
-
 from pydantic import BaseModel, Field, field_validator
-from datetime import datetime
+from typing import Optional
 
 class CarPredictionInput(BaseModel):
     brand: str = Field(..., example="Ford")
-    age: float = Field(..., ge=0, example=11.0)
-    mileage: float = Field(..., ge=0, example=51000.0)
+    model_year: int = Field(..., example=2018)
+    milage: float = Field(..., example=45000.0)
     fuel_type: str = Field(..., example="Gasoline")
     accident: str = Field(..., example="None reported")
 
-    @field_validator('year')
-    @classmethod
-    def validate_year(cls, v: int) -> int:
-        current_year = datetime.now().year + 1
-        if v < 1980 or v > current_year:
-            raise ValueError(f"Year must be between 1980 and {current_year}")
+    @field_validator("model_year")
+    def validate_model_year(cls, v):
+        if v < 1900 or v > 2026:
+            raise ValueError("Model year must be between 1900 and 2026.")
         return v
 
-    @field_validator('mileage')
-    @classmethod
-    def validate_mileage(cls, v: float) -> float:
-        if v < 0.0 or v > 1000000.0:
-            raise ValueError("Mileage must be non-negative and less than 1,000,000")
-        return v
-
-    @field_validator('engine_size')
-    @classmethod
-    def validate_engine(cls, v: float) -> float:
-        if v <= 0.0 or v > 10.0:
-            raise ValueError("Engine size must be between 0.1 and 10.0 liters")
-        return v
-
-    @field_validator('hp')
-    @classmethod
-    def validate_hp(cls, v: float) -> float:
-        if v <= 0.0 or v > 2000.0:
-            raise ValueError("Horsepower must be between 1 and 2000")
+    @field_validator("milage")
+    def validate_milage(cls, v):
+        if v < 0:
+            raise ValueError("Mileage cannot be negative.")
         return v
 
 
 class PredictionResponse(BaseModel):
-    predicted_price: float = Field(..., description="Estimated market price of the asset")
-    status: str = Field(..., description="Execution confirmation state")
-    timestamp: str = Field(..., description="ISO formatted transactional timestamp")
+    predicted_price: float
+    status: str = "SUCCESS"
+    timestamp: str
 
 
 class RetrainResponse(BaseModel):
-    status: str = Field(..., description="Status message detailing evaluation outcome")
-    previous_r2: float = Field(..., description="R-squared metric of the unseated operational model")
-    new_r2: float = Field(..., description="R-squared metric of the newly validated model variant")
-    model_updated: bool = Field(..., description="Flag indicating if the performance bound triggered a hot-swap")
+    status: str
+    previous_r2: Optional[float] = None
+    new_r2: Optional[float] = None
+    model_updated: bool
