@@ -16,11 +16,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("API_GATEWAY")
 
 app = FastAPI(
-    title="Automobile Valuator Engine API",
-    description="Production machine learning backend providing real-time pricing intelligence.",
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
+    title="Used Car Price Prediction API",
+    description="API for predicting used car prices using Linear Regression",
+    version="1.0.0"
 )
 
 # Expanded origin fallbacks for seamless local mobile/web testing
@@ -31,10 +29,10 @@ ALLOWED_ORIGINS = os.getenv(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=["*"],  # Allows request from web, mobile, local dev, etc.
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_methods=["*"],  # Allows GET, POST, OPTIONS, etc.
+    allow_headers=["*"],  # Allows all headers
 )
 
 @app.get("/", tags=["Root"])
