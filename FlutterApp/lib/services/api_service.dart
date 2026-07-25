@@ -15,7 +15,7 @@ class ApiService {
         Uri.parse(AppConstants.predictEndpoint),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(data.toJson()),
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 60));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseBody = jsonDecode(response.body);

@@ -1,6 +1,6 @@
 class AppConstants {
   static const String apiBaseUrl = 'https://used-car-pricing-api.onrender.com';
-  static const String predictEndpoint = '$apiBaseUrl/predict';
+  static const String predictEndpoint = "https://used-car-pricing-api.onrender.com/predict";
   
   static const List<String> brands = [
     'Toyota', 'Honda', 'Ford', 'BMW', 'Mercedes', 'Audi', 'Hyundai', 'Chevrolet'

@@ -215,7 +215,7 @@ class _EstimatorScreenState extends State<EstimatorScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue[800],
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.vertical(16),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: _isLoading
