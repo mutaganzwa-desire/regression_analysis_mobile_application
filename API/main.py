@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, UploadFile, File, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from schemas import CarPredictionInput, PredictionResponse, RetrainResponse
-from prediction import run_inference
+from prediction import run_inference, load_prediction_artifacts
 from retrain import execute_pipeline_retraining
 
 logging.basicConfig(level=logging.INFO)
@@ -21,18 +21,13 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Expanded origin fallbacks for seamless local mobile/web testing
-ALLOWED_ORIGINS = os.getenv(
-    "ALLOWED_ORIGINS", 
-    "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000"
-).split(",")
-
+# ✅ Robust CORS Middleware Setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows request from web, mobile, local dev, etc.
+    allow_origin_regex=".*",  # Allows local web, mobile, local dev, and Render origins safely
     allow_credentials=True,
-    allow_methods=["*"],  # Allows GET, POST, OPTIONS, etc.
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.get("/", tags=["Root"])
@@ -48,7 +43,7 @@ async def root_redirect():
 async def health_check():
     """Verifies infrastructure status and loaded state dependencies."""
     try:
-        from summative.API.prediction import load_prediction_artifacts
+        # ✅ Direct relative import fixed here:
         artifacts = load_prediction_artifacts()
         return {
             "status": "healthy",
