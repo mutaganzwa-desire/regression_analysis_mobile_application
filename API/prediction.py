@@ -37,6 +37,12 @@ def load_prediction_artifacts() -> Any:
         logger.critical(f"Failed to extract deployment artifact serialization: {str(e)}")
         raise e
 
+def invalidate_artifact_cache() -> None:
+    """Clears thread memory cache to force hot reloading after retraining."""
+    global _cached_artifacts
+    _cached_artifacts = None
+    logger.info("Artifact memory cache invalidated successfully.")
+
 def run_inference(input_data: Dict[str, Any]) -> float:
     """
     Ingests raw structural parameters, performs functional transforms,
@@ -87,7 +93,7 @@ def run_inference(input_data: Dict[str, Any]) -> float:
                     df_final[col] = 0.0
             df_final = df_final[features_dict["all_features"]]
     else:
-        # Fallback processing if artifacts dictionary doesn't contain separate preprocessors
+        # Fallback processing
         df_final = pd.get_dummies(df, drop_first=False)
         
         if hasattr(model, "feature_names_in_"):
@@ -100,8 +106,6 @@ def run_inference(input_data: Dict[str, Any]) -> float:
     # 3. Predict valuation
     raw_prediction = model.predict(df_final)[0]
     
-    # Log raw output to Render logs so we can monitor accuracy
     logger.info(f"Raw Model Prediction: {raw_prediction}")
     
-    # Return formatted valuation
     return float(np.maximum(0.0, raw_prediction))
