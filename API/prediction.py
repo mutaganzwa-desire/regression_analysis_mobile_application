@@ -50,17 +50,7 @@ def run_inference(input_data: Dict[str, Any]) -> float:
     """
     artifacts = load_prediction_artifacts()
     
-    # 1. Prepare Pandas DataFrame input
-    df = pd.DataFrame([input_data])
-    
-    current_year = datetime.now().year
-    if "model_year" in df.columns:
-        df["car_age"] = current_year - df["model_year"]
-    elif "year" in df.columns:
-        df["car_age"] = current_year - df["year"]
-
-    # 2. Extract model / pipeline estimator safely
-    model = None
+    # Extract model or pipeline estimator safely
     if not isinstance(artifacts, dict):
         model = artifacts
     elif "pipeline" in artifacts:
@@ -68,14 +58,37 @@ def run_inference(input_data: Dict[str, Any]) -> float:
     elif "model" in artifacts:
         model = artifacts["model"]
     else:
-        # Fallback: take the first item in dictionary
         model = next(iter(artifacts.values()))
 
-    # 3. Perform prediction
+    # Create input DataFrame
+    df = pd.DataFrame([input_data])
+
+    # Ensure year -> car_age derivation if required
+    current_year = datetime.now().year
+    if "model_year" in df.columns and "car_age" not in df.columns:
+        df["car_age"] = current_year - df["model_year"]
+    elif "year" in df.columns and "car_age" not in df.columns:
+        df["car_age"] = current_year - df["year"]
+
+    # Check if the model is a full scikit-learn Pipeline (which handles strings natively)
+    is_pipeline = hasattr(model, "steps") or hasattr(model, "named_steps")
+
+    if not is_pipeline:
+        # If it's a raw regressor (e.g., LinearRegression), convert string categoricals using One-Hot Encoding
+        df = pd.get_dummies(df, drop_first=True)
+
+    # Check feature alignment if the model stores feature names
+    if hasattr(model, "feature_names_in_"):
+        expected_features = list(model.feature_names_in_)
+        for col in expected_features:
+            if col not in df.columns:
+                df[col] = 0.0
+        df = df[expected_features]
+
     try:
         raw_prediction = model.predict(df)[0]
     except Exception as err:
-        logger.error(f"Prediction execution failed on model object: {str(err)}")
+        logger.error(f"Inference prediction pass error: {str(err)}")
         raise err
 
     return float(np.maximum(0.0, raw_prediction))
