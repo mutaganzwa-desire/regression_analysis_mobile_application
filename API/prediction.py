@@ -50,12 +50,15 @@ def run_inference(input_data: Dict[str, Any]) -> float:
     """
     artifacts = load_prediction_artifacts()
     
-    # 1. Extract raw model estimator
+    # 1. Extract raw model estimator safely
     if isinstance(artifacts, dict):
         model = artifacts.get("model", artifacts.get("pipeline", next(iter(artifacts.values()))))
         scaler = artifacts.get("scaler")
         encoder = artifacts.get("encoder")
-        feature_names = artifacts.get("features", {}).get("all_features") if isinstance(artifacts.get("features"), dict) else None
+        
+        # Safely extract features dictionary if it exists
+        features_dict = artifacts.get("features", {})
+        feature_names = features_dict.get("all_features") if isinstance(features_dict, dict) else None
     else:
         model = artifacts
         scaler = None
@@ -77,9 +80,9 @@ def run_inference(input_data: Dict[str, Any]) -> float:
         df["car_age"] = current_year - df["year"]
 
     # 4. Perform Encoding & Scaling if fitted transformers exist in artifacts
-    if encoder is not None and scaler is not None:
-        num_cols = artifacts["features"]["numerical"]
-        cat_cols = artifacts["features"]["categorical"]
+    if encoder is not None and scaler is not None and isinstance(features_dict, dict) and "numerical" in features_dict:
+        num_cols = features_dict["numerical"]
+        cat_cols = features_dict["categorical"]
         
         num_scaled = scaler.transform(df[num_cols])
         df_num = pd.DataFrame(num_scaled, columns=num_cols)
@@ -93,21 +96,20 @@ def run_inference(input_data: Dict[str, Any]) -> float:
         # Fallback One-Hot Encoding
         df_final = pd.get_dummies(df, drop_first=False)
 
-    # 5. Align to the exact 67 features expected by LinearRegression
+    # 5. Align feature matrix shape and feature names
     if feature_names is not None:
         for col in feature_names:
             if col not in df_final.columns:
                 df_final[col] = 0.0
         df_final = df_final[feature_names]
     elif hasattr(model, "n_features_in_"):
-        # If no explicit feature names stored, pad/truncate matrix to 67 columns
         expected_n = model.n_features_in_
         current_n = df_final.shape[1]
         if current_n < expected_n:
             for i in range(expected_n - current_n):
                 df_final[f"dummy_feature_{i}"] = 0.0
 
-    # 6. Predict!
+    # 6. Perform prediction
     raw_prediction = model.predict(df_final)[0]
     
     return float(np.maximum(0.0, raw_prediction))
