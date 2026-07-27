@@ -5,7 +5,8 @@ and deterministic forward-pass transformation executions.
 
 import os
 import logging
-from typing import Dict, Any, Tuple
+from typing import Dict, Any
+from datetime import datetime
 import joblib
 import pandas as pd
 import numpy as np
@@ -13,8 +14,9 @@ import numpy as np
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-MODEL_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "linear_regression", "models"))
-ARTIFACT_PATH = os.path.join(MODEL_DIR, "production_artifacts.joblib")
+# Point directly to the current API folder where pipeline_artifact.joblib lives
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ARTIFACT_PATH = os.path.join(BASE_DIR, "pipeline_artifact.joblib")
 
 _cached_artifacts: Dict[str, Any] = {}
 
@@ -49,6 +51,15 @@ def run_inference(input_data: Dict[str, Any]) -> float:
     """
     artifacts = load_prediction_artifacts()
     
+    # If your joblib payload is a full pipeline object (e.g. sklearn Pipeline):
+    if not isinstance(artifacts, dict):
+        df = pd.DataFrame([input_data])
+        if "year" in df.columns:
+            df["car_age"] = datetime.now().year - df["year"]
+        raw_prediction = artifacts.predict(df)[0]
+        return float(np.maximum(0.0, raw_prediction))
+
+    # If your joblib payload is a dictionary containing individual components:
     model = artifacts["model"]
     scaler = artifacts["scaler"]
     encoder = artifacts["encoder"]
@@ -58,8 +69,9 @@ def run_inference(input_data: Dict[str, Any]) -> float:
 
     df = pd.DataFrame([input_data])
     
-    # Engine Age extraction logic
-    df["car_age"] = datetime.now().year - df["year"]
+    # Calculate car age if required by feature pipeline
+    if "year" in df.columns:
+        df["car_age"] = datetime.now().year - df["year"]
     
     # Feature transformations
     num_data = df[numerical_columns].copy()
@@ -81,5 +93,4 @@ def run_inference(input_data: Dict[str, Any]) -> float:
     
     raw_prediction = model.predict(final_features_df)[0]
     
-    # Handle edge case: ensure negative bounds are structurally impossible
     return float(np.maximum(0.0, raw_prediction))
