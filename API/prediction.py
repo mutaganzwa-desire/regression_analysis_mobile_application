@@ -50,45 +50,64 @@ def run_inference(input_data: Dict[str, Any]) -> float:
     """
     artifacts = load_prediction_artifacts()
     
-    # Extract model or pipeline estimator safely
-    if not isinstance(artifacts, dict):
-        model = artifacts
-    elif "pipeline" in artifacts:
-        model = artifacts["pipeline"]
-    elif "model" in artifacts:
-        model = artifacts["model"]
+    # 1. Extract raw model estimator
+    if isinstance(artifacts, dict):
+        model = artifacts.get("model", artifacts.get("pipeline", next(iter(artifacts.values()))))
+        scaler = artifacts.get("scaler")
+        encoder = artifacts.get("encoder")
+        feature_names = artifacts.get("features", {}).get("all_features") if isinstance(artifacts.get("features"), dict) else None
     else:
-        model = next(iter(artifacts.values()))
+        model = artifacts
+        scaler = None
+        encoder = None
+        feature_names = None
 
-    # Create input DataFrame
+    # 2. Check model's intrinsic feature names if available
+    if feature_names is None and hasattr(model, "feature_names_in_"):
+        feature_names = list(model.feature_names_in_)
+
+    # 3. Create DataFrame
     df = pd.DataFrame([input_data])
-
-    # Ensure year -> car_age derivation if required
+    
+    # Year -> Car Age derivation if needed
     current_year = datetime.now().year
     if "model_year" in df.columns and "car_age" not in df.columns:
         df["car_age"] = current_year - df["model_year"]
     elif "year" in df.columns and "car_age" not in df.columns:
         df["car_age"] = current_year - df["year"]
 
-    # Check if the model is a full scikit-learn Pipeline (which handles strings natively)
-    is_pipeline = hasattr(model, "steps") or hasattr(model, "named_steps")
+    # 4. Perform Encoding & Scaling if fitted transformers exist in artifacts
+    if encoder is not None and scaler is not None:
+        num_cols = artifacts["features"]["numerical"]
+        cat_cols = artifacts["features"]["categorical"]
+        
+        num_scaled = scaler.transform(df[num_cols])
+        df_num = pd.DataFrame(num_scaled, columns=num_cols)
 
-    if not is_pipeline:
-        # If it's a raw regressor (e.g., LinearRegression), convert string categoricals using One-Hot Encoding
-        df = pd.get_dummies(df, drop_first=True)
+        cat_encoded = encoder.transform(df[cat_cols])
+        encoded_cols = encoder.get_feature_names_out(cat_cols)
+        df_cat = pd.DataFrame(cat_encoded, columns=encoded_cols)
 
-    # Check feature alignment if the model stores feature names
-    if hasattr(model, "feature_names_in_"):
-        expected_features = list(model.feature_names_in_)
-        for col in expected_features:
-            if col not in df.columns:
-                df[col] = 0.0
-        df = df[expected_features]
+        df_final = pd.concat([df_num, df_cat], axis=1)
+    else:
+        # Fallback One-Hot Encoding
+        df_final = pd.get_dummies(df, drop_first=False)
 
-    try:
-        raw_prediction = model.predict(df)[0]
-    except Exception as err:
-        logger.error(f"Inference prediction pass error: {str(err)}")
-        raise err
+    # 5. Align to the exact 67 features expected by LinearRegression
+    if feature_names is not None:
+        for col in feature_names:
+            if col not in df_final.columns:
+                df_final[col] = 0.0
+        df_final = df_final[feature_names]
+    elif hasattr(model, "n_features_in_"):
+        # If no explicit feature names stored, pad/truncate matrix to 67 columns
+        expected_n = model.n_features_in_
+        current_n = df_final.shape[1]
+        if current_n < expected_n:
+            for i in range(expected_n - current_n):
+                df_final[f"dummy_feature_{i}"] = 0.0
 
+    # 6. Predict!
+    raw_prediction = model.predict(df_final)[0]
+    
     return float(np.maximum(0.0, raw_prediction))
