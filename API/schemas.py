@@ -2,11 +2,14 @@ from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 
 class CarPredictionInput(BaseModel):
-    brand: str = Field(..., example="Ford")
+    brand: str = Field(..., example="Toyota")
     model_year: int = Field(..., example=2018)
-    milage: float = Field(..., example=45000.0)
-    fuel_type: str = Field(..., example="Gasoline")
-    accident: str = Field(..., example="None reported")
+    milage: float = Field(..., example=65000.0)
+    engine_size: float = Field(..., example=2.5)
+    horsepower: int = Field(..., example=203)
+    transmission: str = Field(..., example="Automatic")
+    fuel_type: str = Field(..., example="Petrol")
+    accident: Optional[str] = Field(default="None reported")
 
     @field_validator("model_year")
     def validate_model_year(cls, v):

@@ -19,13 +19,14 @@ class CarInputModel {
 
   Map<String, dynamic> toJson() {
     return {
-      'year': year,
-      'mileage': mileage,
-      'engine_size': engineSize,
-      'hp': hp,
       'brand': brand,
+      'model_year': year,
+      'milage': mileage,           // FastAPI schema expects 'milage'
+      'engine_size': engineSize,
+      'horsepower': hp.toInt(),    // Send as int to match schema
       'transmission': transmission,
       'fuel_type': fuelType,
+      'accident': 'None reported', // Default value so FastAPI validation succeeds
     };
   }
 }

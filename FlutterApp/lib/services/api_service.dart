@@ -22,7 +22,19 @@ class ApiService {
         return (responseBody['predicted_price'] as num).toDouble();
       } else {
         final Map<String, dynamic> errorData = jsonDecode(response.body);
-        throw HttpException(errorData['detail'] ?? 'Remote platform verification error.');
+        
+        // Safely parse detail if it's a String or List
+        String detailMessage = 'Remote platform verification error.';
+        if (errorData['detail'] != null) {
+          if (errorData['detail'] is String) {
+            detailMessage = errorData['detail'];
+          } else if (errorData['detail'] is List) {
+            final List errors = errorData['detail'];
+            detailMessage = errors.map((e) => "${e['loc']?.last}: ${e['msg']}").join(', ');
+          }
+        }
+        
+        throw HttpException(detailMessage);
       }
     } on SocketException {
       throw const HttpException('Network connection timeout. Check connectivity links.');

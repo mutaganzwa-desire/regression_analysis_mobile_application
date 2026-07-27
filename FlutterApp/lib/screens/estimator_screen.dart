@@ -224,7 +224,7 @@ class _EstimatorScreenState extends State<EstimatorScreen> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
-                      : const Text('Compute Asset Inferences', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      : const Text('Predict', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(height: 24),
                 if (_errorMessage != null)
