@@ -55,7 +55,7 @@ def run_inference(input_data: Dict[str, Any]) -> float:
         model = artifacts.get("model", artifacts.get("pipeline", next(iter(artifacts.values()))))
         scaler = artifacts.get("scaler")
         encoder = artifacts.get("encoder")
-        features_dict = artifacts.get("features", {})
+        features_dict = artifacts.get("features", {}) if isinstance(artifacts.get("features"), dict) else {}
     else:
         model = artifacts
         scaler = None
@@ -64,7 +64,7 @@ def run_inference(input_data: Dict[str, Any]) -> float:
 
     df = pd.DataFrame([input_data])
     
-    # Derivations
+    # Year -> Car Age derivation
     current_year = datetime.now().year
     if "model_year" in df.columns and "car_age" not in df.columns:
         df["car_age"] = current_year - df["model_year"]
@@ -72,40 +72,47 @@ def run_inference(input_data: Dict[str, Any]) -> float:
         df["car_age"] = current_year - df["year"]
 
     # 2. Extract fitted transformers if available
-    if encoder is not None and scaler is not None and isinstance(features_dict, dict) and "numerical" in features_dict:
+    if encoder is not None and scaler is not None and "numerical" in features_dict and "categorical" in features_dict:
         num_cols = features_dict["numerical"]
         cat_cols = features_dict["categorical"]
         
-        # Scale numericals
         num_scaled = scaler.transform(df[num_cols])
         df_num = pd.DataFrame(num_scaled, columns=num_cols)
 
-        # Encode categoricals
         cat_encoded = encoder.transform(df[cat_cols])
         encoded_cols = encoder.get_feature_names_out(cat_cols)
         df_cat = pd.DataFrame(cat_encoded, columns=encoded_cols)
 
         df_final = pd.concat([df_num, df_cat], axis=1)
-        
-        if "all_features" in features_dict:
-            for col in features_dict["all_features"]:
-                if col not in df_final.columns:
-                    df_final[col] = 0.0
-            df_final = df_final[features_dict["all_features"]]
     else:
-        # Fallback processing
+        # Fallback categorical encoding
         df_final = pd.get_dummies(df, drop_first=False)
-        
-        if hasattr(model, "feature_names_in_"):
-            expected_cols = list(model.feature_names_in_)
-            for col in expected_cols:
-                if col not in df_final.columns:
-                    df_final[col] = 0.0
-            df_final = df_final[expected_cols]
 
-    # 3. Predict valuation
-    raw_prediction = model.predict(df_final)[0]
-    
-    logger.info(f"Raw Model Prediction: {raw_prediction}")
+    # 3. Align feature matrix shape to match expected model input
+    feature_names = features_dict.get("all_features")
+    if feature_names is None and hasattr(model, "feature_names_in_"):
+        feature_names = list(model.feature_names_in_)
+
+    if feature_names is not None:
+        for col in feature_names:
+            if col not in df_final.columns:
+                df_final[col] = 0.0
+        df_final = df_final[feature_names]
+        X_input = df_final.values
+    else:
+        # Pad numeric matrix directly to match model.n_features_in_
+        X_input = df_final.select_dtypes(include=[np.number]).values
+        expected_n = getattr(model, "n_features_in_", 67)
+        current_n = X_input.shape[1]
+        
+        if current_n < expected_n:
+            padding = np.zeros((X_input.shape[0], expected_n - current_n))
+            X_input = np.hstack([X_input, padding])
+        elif current_n > expected_n:
+            X_input = X_input[:, :expected_n]
+
+    # 4. Predict
+    raw_prediction = model.predict(X_input)[0]
+    logger.info(f"Raw Model Prediction Output: {raw_prediction}")
     
     return float(np.maximum(0.0, raw_prediction))
