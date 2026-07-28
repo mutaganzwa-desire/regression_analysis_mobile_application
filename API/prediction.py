@@ -50,69 +50,68 @@ def run_inference(input_data: Dict[str, Any]) -> float:
     """
     artifacts = load_prediction_artifacts()
     
-    # 1. Unpack artifacts dynamically
-    if isinstance(artifacts, dict):
-        model = artifacts.get("model", artifacts.get("pipeline", next(iter(artifacts.values()))))
-        scaler = artifacts.get("scaler")
-        encoder = artifacts.get("encoder")
-        features_dict = artifacts.get("features", {}) if isinstance(artifacts.get("features"), dict) else {}
+    scaler = artifacts["scaler"]
+    encoder = artifacts["encoder"]
+    model = artifacts["model"]
+    num_cols = artifacts["numeric_features"]
+    cat_cols = artifacts["categorical_features"]
+    all_feature_names = artifacts["all_feature_names"]
+
+    # 1. Standardize / Map Incoming Frontend Keys to Expecting Pipeline Columns
+    raw_brand = input_data.get("brand", input_data.get("manufacturer_brand", "Toyota"))
+    raw_year = input_data.get("model_year", input_data.get("year", 2018))
+    raw_mileage = input_data.get("odometer", input_data.get("mileage", input_data.get("odometer_miles", 65000)))
+    raw_fuel = input_data.get("fuel_type", input_data.get("combustible_fuel_type", "Gasoline"))
+    raw_accident = input_data.get("accident", "None reported")
+
+    # Calculate Car Age from Model Year
+    try:
+        year_val = float(raw_year)
+        age_val = float(datetime.now().year - year_val)
+    except (ValueError, TypeError):
+        age_val = 6.0
+
+    try:
+        mileage_val = float(raw_mileage)
+    except (ValueError, TypeError):
+        mileage_val = 65000.0
+
+    # Fuel type normalization to match trained categories ('Gasoline', 'Diesel', etc.)
+    if "petrol" in str(raw_fuel).lower() or "gas" in str(raw_fuel).lower():
+        norm_fuel = "Gasoline"
+    elif "diesel" in str(raw_fuel).lower():
+        norm_fuel = "Diesel"
+    elif "hybrid" in str(raw_fuel).lower():
+        norm_fuel = "Hybrid"
     else:
-        model = artifacts
-        scaler = None
-        encoder = None
-        features_dict = {}
+        norm_fuel = str(raw_fuel)
 
-    df = pd.DataFrame([input_data])
-    
-    # Year -> Car Age derivation
-    current_year = datetime.now().year
-    if "model_year" in df.columns and "car_age" not in df.columns:
-        df["car_age"] = current_year - df["model_year"]
-    elif "year" in df.columns and "car_age" not in df.columns:
-        df["car_age"] = current_year - df["year"]
+    # 2. Build Single-Row DataFrame matching fitted input
+    df_raw = pd.DataFrame([{
+        "Age": age_val,
+        "Mileage": mileage_val,
+        "Brand": str(raw_brand),
+        "FuelType": norm_fuel,
+        "Accident": str(raw_accident)
+    }])
 
-    # 2. Extract fitted transformers if available
-    if encoder is not None and scaler is not None and "numerical" in features_dict and "categorical" in features_dict:
-        num_cols = features_dict["numerical"]
-        cat_cols = features_dict["categorical"]
-        
-        num_scaled = scaler.transform(df[num_cols])
-        df_num = pd.DataFrame(num_scaled, columns=num_cols)
+    # 3. Transform Numerical Features using Scaler
+    num_scaled = scaler.transform(df_raw[num_cols])
+    df_num = pd.DataFrame(num_scaled, columns=num_cols)
 
-        cat_encoded = encoder.transform(df[cat_cols])
-        encoded_cols = encoder.get_feature_names_out(cat_cols)
-        df_cat = pd.DataFrame(cat_encoded, columns=encoded_cols)
+    # 4. Transform Categorical Features using OneHotEncoder
+    cat_encoded = encoder.transform(df_raw[cat_cols])
+    encoded_cols = encoder.get_feature_names_out(cat_cols)
+    df_cat = pd.DataFrame(cat_encoded, columns=encoded_cols)
 
-        df_final = pd.concat([df_num, df_cat], axis=1)
-    else:
-        # Fallback categorical encoding
-        df_final = pd.get_dummies(df, drop_first=False)
+    # Combine Numerical + Categorical
+    df_processed = pd.concat([df_num, df_cat], axis=1)
 
-    # 3. Align feature matrix shape to match expected model input
-    feature_names = features_dict.get("all_features")
-    if feature_names is None and hasattr(model, "feature_names_in_"):
-        feature_names = list(model.feature_names_in_)
+    # 5. Reindex to match the EXACT 67 features expected by LinearRegression
+    df_final = df_processed.reindex(columns=all_feature_names, fill_value=0.0)
 
-    if feature_names is not None:
-        for col in feature_names:
-            if col not in df_final.columns:
-                df_final[col] = 0.0
-        df_final = df_final[feature_names]
-        X_input = df_final.values
-    else:
-        # Pad numeric matrix directly to match model.n_features_in_
-        X_input = df_final.select_dtypes(include=[np.number]).values
-        expected_n = getattr(model, "n_features_in_", 67)
-        current_n = X_input.shape[1]
-        
-        if current_n < expected_n:
-            padding = np.zeros((X_input.shape[0], expected_n - current_n))
-            X_input = np.hstack([X_input, padding])
-        elif current_n > expected_n:
-            X_input = X_input[:, :expected_n]
+    # 6. Perform Prediction
+    raw_prediction = model.predict(df_final)[0]
+    logger.info(f"Calculated Valuation: {raw_prediction}")
 
-    # 4. Predict
-    raw_prediction = model.predict(X_input)[0]
-    logger.info(f"Raw Model Prediction Output: {raw_prediction}")
-    
-    return float(np.maximum(0.0, raw_prediction))
+    return float(np.maximum(1000.0, raw_prediction))
