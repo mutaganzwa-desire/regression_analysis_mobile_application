@@ -1,84 +1,57 @@
 # Used Car Asset Valuation Engine
 
-A full-stack, machine learning-powered mobile application and RESTful API that predicts used car market valuations in real time. Built with Flutter, FastAPI, scikit-learn, and deployed on Render.
+## Description of Mission and Problem
+Used car buyers and sellers struggle with inaccurate vehicle price estimations due to fragmented market data and complex feature interactions. 
+This project provides a machine learning engine that calculates real-time vehicle valuations using physical and operational metrics. It exposes a public FastAPI backend integrated with a Flutter mobile app for instant asset appraisal.
 
 ---
 
-## Key Features
+## Publicly Available API Endpoint
 
-* Real-Time Predictive Inference: Connects a Flutter mobile UI to a remote production ML pipeline over HTTP.
-* Scikit-Learn ML Pipeline: Leverages a trained LinearRegression model bundled with StandardScaler and OneHotEncoder artifacts.
-* Deterministic Feature Alignment: Converts raw user inputs (Year, Brand, Fuel Type, etc.) into exact 67-column encoded feature matrices automatically.
-* Automated Data Preprocessing: Dynamically calculates derivative metrics like Car Age from user-selected model years.
-* CI/CD & Cloud Deployment: Continuous deployment pipeline hosted on Render with instant hot-reloading capability.
+* Production API Base URL: [](https://used-car-pricing-api.onrender.com)
+* Swagger UI Testing Interface: [](https://used-car-pricing-api.onrender.com/docs)
 
----
-
-## Tech Stack
-
-### Mobile Frontend
-* Framework: Flutter (Dart)
-* Networking: http package for REST communications
-* UI/UX: Material Design interface with interactive feedback states
-
-### Backend API
-* Framework: FastAPI (Python)
-* ASGI Server: Uvicorn
-* Data Processing & ML: pandas, numpy, scikit-learn, joblib
-* Deployment: Render Web Service
+Note: The API endpoint uses a publicly routable HTTPS URL hosted on Render and can be tested directly using the interactive Swagger UI documentation at the `/docs` endpoint.
 
 ---
 
-## Getting Started Locally
+## Video Demonstration
 
-### 1. Prerequisites
-* Flutter SDK installed locally.
-* Python 3.10 or higher installed.
+A 7-minute video demonstration covering the machine learning model development, backend FastAPI deployment, and live Flutter mobile application workflow is available on YouTube:
 
----
-
-### 2. Backend Setup (FastAPI)
-
-1. Clone the repository and navigate into the project directory.
-
-2. Create and activate a virtual environment:
-   python -m venv venv
-   
-   On Windows:
-   .\venv\Scripts\activate
-   
-   On macOS/Linux:
-   source venv/bin/activate
-
-3. Install dependencies:
-   pip install -r requirements.txt
-
-4. Run the local API server:
-   python -m uvicorn summative.API.main:app --reload --host 0.0.0.0 --port 8000
-   
-   The API will be available at http://localhost:8000 and interactive Swagger Documentation at http://localhost:8000/docs.
+* Video Demo Link: https://www.youtube.com/watch?v=YOUR_VIDEO_ID
 
 ---
 
-### 3. Mobile App Setup (Flutter)
+## Instructions to Run the Mobile Application
 
-1. Navigate to your Flutter project directory.
+### Prerequisites
+* Flutter SDK (Version 3.0.0 or higher) installed.
+* An active Android Emulator, iOS Simulator, or connected physical testing device.
 
-2. Install Flutter packages:
+### Execution Steps
+
+1. Open a terminal and navigate to the Flutter application directory:
+   cd linear_regression_model\summative\FlutterApp
+
+2. Fetch required package dependencies:
    flutter pub get
 
-3. Run the app on an emulator or physical device:
+3. Verify connected devices:
+   flutter devices
+
+4. Run the application on your target device:
    flutter run
 
 ---
 
-## API Endpoint Reference
+## API Request and Response Specification
 
 ### POST /predict
 
-Calculates the market valuation for a given vehicle specification.
+Accepts vehicle parameters and returns the predicted market valuation.
 
-#### Request Body Sample:
+#### Sample Request Body:
 ```json
 {
   "manufacturer_brand": "Toyota",
