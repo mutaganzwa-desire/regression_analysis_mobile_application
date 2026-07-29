@@ -19,7 +19,7 @@ Note: The API endpoint uses a publicly routable HTTPS URL hosted on Render and c
 
 A 7-minute video demonstration covering the machine learning model development, backend FastAPI deployment, and live Flutter mobile application workflow is available on YouTube:
 
-* Video Demo Link: https://www.youtube.com/watch?v=YOUR_VIDEO_ID
+* Video Demo Link: [https://www.youtube.com/watch?v=YOUR_VIDEO_ID](https://youtu.be/sRVLhcZu7IE)
 
 ---
 
