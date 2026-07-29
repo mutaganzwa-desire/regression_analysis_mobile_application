@@ -8,8 +8,8 @@ This project provides a machine learning engine that calculates real-time vehicl
 
 ## Publicly Available API Endpoint
 
-* Production API Base URL: [](https://used-car-pricing-api.onrender.com)
-* Swagger UI Testing Interface: [](https://used-car-pricing-api.onrender.com/docs)
+* Production API Base URL: [https://used-car-pricing-api.onrender.com](https://used-car-pricing-api.onrender.com)
+* Swagger UI Testing Interface: [https://used-car-pricing-api.onrender.com/docs](https://used-car-pricing-api.onrender.com/docs)
 
 Note: The API endpoint uses a publicly routable HTTPS URL hosted on Render and can be tested directly using the interactive Swagger UI documentation at the `/docs` endpoint.
 
@@ -19,7 +19,7 @@ Note: The API endpoint uses a publicly routable HTTPS URL hosted on Render and c
 
 A 7-minute video demonstration covering the machine learning model development, backend FastAPI deployment, and live Flutter mobile application workflow is available on YouTube:
 
-* Video Demo Link: [https://www.youtube.com/watch?v=YOUR_VIDEO_ID](https://youtu.be/sRVLhcZu7IE)
+* Video Demo Link: [https://youtu.be/sRVLhcZu7IE](https://youtu.be/sRVLhcZu7IE)
 
 ---
 
